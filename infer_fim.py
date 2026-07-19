@@ -54,13 +54,13 @@ suffix = """
 
 
 # 与训练数据严格一致的格式：
-# <|fim_prefix|>\n{prefix}\n\n<|fim_suffix|>\n{suffix}\n\n<|fim_middle|>\n
+# <|fim_prefix|>{prefix}<|fim_suffix|>{suffix}<|fim_middle|>
 fim_prompt = (
-    "<|fim_prefix|>\n"
+    "<|fim_prefix|>"
     + prefix.strip()
-    + "\n\n<|fim_suffix|>\n"
+    + "<|fim_suffix|>"
     + suffix.strip()
-    + "\n\n<|fim_middle|>\n"
+    + "<|fim_middle|>"
 )
 
 

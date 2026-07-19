@@ -39,11 +39,11 @@ from peft import (
 # =========================
 
 
-BASE_MODEL=r".\SpringNote-Qwen3-0.6B-FIM"
+BASE_MODEL="./SpringNote-Qwen3-0.6B-FIM-V2"
 
-DATASET=r".\data\persona_train_aug.jsonl"
+DATASET="./data/persona_train_aug.jsonl"
 
-OUTPUT=r".\output-qwen3-0.6-persona-v2"
+OUTPUT="./output-qwen3-0.6-persona-v3"
 
 
 

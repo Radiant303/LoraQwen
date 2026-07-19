@@ -31,17 +31,10 @@
 - middle 长度按比例混合：25% 极短（1~8 字符）、35% 短、25% 中、15% 长（80~160 字符）
 - 优先在标点处截断，保证 middle 语义完整
 
-生成的样本格式（训练/推理必须严格一致）：
+生成的样本格式（训练/推理必须严格一致，token 之间无换行）：
 
 ```
-<|fim_prefix|>
-{上文}
-
-<|fim_suffix|>
-{下文}
-
-<|fim_middle|>
-{要补全的内容}<|im_end|>
+<|fim_prefix|>{上文}<|fim_suffix|>{下文}<|fim_middle|>{要补全的内容}<|im_end|>
 ```
 
 文件流转：`input.txt` →（`data_create.py`）→ 根目录 `fim_dataset.jsonl` → **手动移到** `data/train.jsonl`（训练脚本读这个路径，约 1.4 万条）。

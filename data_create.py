@@ -252,11 +252,11 @@ def create_samples(report):
 
 
         sample=(
-            f"{FIM_PREFIX}\n"
-            f"{prefix}\n\n"
-            f"{FIM_SUFFIX}\n"
-            f"{suffix}\n\n"
-            f"{FIM_MIDDLE}\n"
+            f"{FIM_PREFIX}"
+            f"{prefix}"
+            f"{FIM_SUFFIX}"
+            f"{suffix}"
+            f"{FIM_MIDDLE}"
             f"{middle}"
             f"{EOS}"
         )

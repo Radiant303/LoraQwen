@@ -3,8 +3,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 BASE = "./Qwen3-0.6B"
-LORA = "./output-qwen3-0.6-fim-v5"
-OUTPUT = "./SpringNote-Qwen3-0.6B-FIM"
+LORA = "./output-qwen3-0.6-fim-v6"
+OUTPUT = "./SpringNote-Qwen3-0.6B-FIM-V2"
 
 
 
@@ -46,4 +46,4 @@ tokenizer.save_pretrained(
 )
 
 
-print("✅ SpringNote-Qwen3-0.6B-FIM 合并完成")
+print("✅ SpringNote-Qwen3-0.6B-FIM-V2 合并完成")

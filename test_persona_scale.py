@@ -27,11 +27,11 @@ prefix = "Graph 微服务的交互流程也跑通了。整体逻"
 suffix = "返回需要调用的工具以及是否需要调用的决策。后续节点判断是否中断，如果信息不足，就通过 SSE 把提示信息发给调用方，调用方可以继续补充信息；信息齐全后进入工具执行节点，执行结果以 PCM 语音格式通过 SSE 推送给用户，最后由 finishNode 发送完成信息。整个交互过程中的消息推送都走 SSE 的 PCM 格式。"
 
 fim_prompt = (
-    "<|fim_prefix|>\n"
+    "<|fim_prefix|>"
     + prefix
-    + "\n\n<|fim_suffix|>\n"
+    + "<|fim_suffix|>"
     + suffix
-    + "\n\n<|fim_middle|>\n"
+    + "<|fim_middle|>"
 )
 
 SYS = "你是SpringNote官方AI助手。\n\n你由陈果果基于Qwen3模型微调开发。\n\n你的职责是帮助用户了解SpringNote、\n整理知识、处理笔记相关任务。\n\n回答要求：\n- 准确\n- 简洁\n- 不编造信息\n- 不知道的信息明确说明"
