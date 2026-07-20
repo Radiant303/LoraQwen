@@ -1,7 +1,12 @@
+import os
+
 import torch
 
 
-from datasets import load_dataset
+from datasets import (
+    load_dataset,
+    concatenate_datasets
+)
 
 
 from transformers import (
@@ -41,9 +46,25 @@ from peft import (
 
 BASE_MODEL="./SpringNote-Qwen3-0.6B-FIM-V2"
 
-DATASET="./data/persona_train_aug.jsonl"
+# 多任务数据:人设 + 工具调用 + 思考链(不存在自动跳过)
 
-OUTPUT="./output-qwen3-0.6-persona-v3"
+DATASETS=[
+
+    "./data/persona_train_aug.jsonl",
+
+    "./data/tools_train.jsonl",
+
+    "./data/think_train.jsonl"
+
+]
+
+# FIM rehearsal,防止chat训练再次污染补全能力
+
+FIM_REHEARSAL="./data/train.jsonl"
+
+FIM_REHEARSAL_N=500
+
+OUTPUT="./output-qwen3-0.6-persona-v4"
 
 
 
@@ -103,7 +124,6 @@ model=AutoModelForCausalLM.from_pretrained(
 model.config.use_cache=False
 
 
-
 model=prepare_model_for_kbit_training(
     model
 )
@@ -158,27 +178,100 @@ model.print_trainable_parameters()
 
 
 # =========================
-# assistant-only loss
+# 数据集:多任务混合
 # =========================
+
+
+files=[
+
+    f
+
+    for f in DATASETS
+
+    if os.path.exists(f)
+
+]
+
+print(
+
+    "训练文件:",
+
+    files
+
+)
 
 
 dataset=load_dataset(
 
     "json",
 
-    data_files=DATASET
+    data_files=files
 
 )["train"]
 
 
+fim=load_dataset(
 
-assistant_token_ids=tokenizer.encode(
+    "json",
+
+    data_files=FIM_REHEARSAL
+
+)["train"].shuffle(
+
+    seed=42
+
+).select(
+
+    range(FIM_REHEARSAL_N)
+
+)
+
+
+dataset=concatenate_datasets(
+
+    [dataset, fim]
+
+).shuffle(
+
+    seed=42
+
+)
+
+
+print(
+
+    "总样本数:",
+
+    len(dataset)
+
+)
+
+
+
+# =========================
+# loss mask
+# =========================
+
+
+assistant_marker=tokenizer.encode(
 
     "<|im_start|>assistant",
 
     add_special_tokens=False
 
 )
+
+
+im_end_id=tokenizer.encode(
+
+    "<|im_end|>",
+
+    add_special_tokens=False
+
+)[0]
+
+
+FIM_MARKER="<|fim_middle|>"
 
 
 
@@ -193,7 +286,7 @@ def tokenize(example):
 
         text,
 
-        max_length=512,
+        max_length=8192,
 
         truncation=True
 
@@ -205,49 +298,41 @@ def tokenize(example):
 
 
 
-    labels=input_ids.copy()
-
-
-
     # 默认全部不训练
 
     labels=[
 
         -100
 
-        for _ in labels
+        for _ in input_ids
 
     ]
 
 
 
-    # 找 assistant 开始位置
-
-    start=-1
+    if FIM_MARKER in text:
 
 
+        # FIM rehearsal:只训练 middle 和结束符
 
-    for i in range(
+        prefix_text=text[
 
-        len(input_ids)-len(assistant_token_ids)
+            :text.find(FIM_MARKER)+len(FIM_MARKER)
 
-    ):
-
-
-        if input_ids[
-
-            i:i+len(assistant_token_ids)
-
-        ] == assistant_token_ids:
+        ]
 
 
-            start=i+len(assistant_token_ids)
+        start=len(
 
-            break
+            tokenizer(
 
+                prefix_text,
 
+                add_special_tokens=False
 
-    if start!=-1:
+            )["input_ids"]
+
+        )
 
 
         for i in range(
@@ -259,11 +344,59 @@ def tokenize(example):
         ):
 
 
-            # padding不要训练
+            labels[i]=input_ids[i]
 
-            if input_ids[i] != tokenizer.pad_token_id:
 
-                labels[i]=input_ids[i]
+    else:
+
+
+        # 每个 assistant 段都参与 loss(含 tool_call 段),
+        # user/tool 返回段不训练;<|im_end|> 参与,学会停止
+
+        m=len(assistant_marker)
+
+        i=0
+
+
+        while i<=len(input_ids)-m:
+
+
+            if input_ids[
+
+                i:i+m
+
+            ] == assistant_marker:
+
+
+                j=i+m
+
+
+                while (
+
+                    j<len(input_ids)
+
+                    and input_ids[j]!=im_end_id
+
+                ):
+
+
+                    labels[j]=input_ids[j]
+
+                    j+=1
+
+
+                if j<len(input_ids):
+
+                    labels[j]=input_ids[j]
+
+                    j+=1
+
+
+                i=j
+
+            else:
+
+                i+=1
 
 
 
@@ -286,6 +419,17 @@ dataset=dataset.map(
 )
 
 
+dataset=dataset.filter(
+
+    lambda x: any(
+
+        l != -100 for l in x["labels"]
+
+    )
+
+)
+
+
 
 # =========================
 # 训练
@@ -298,13 +442,16 @@ args=TrainingArguments(
     output_dir=OUTPUT,
 
 
-    num_train_epochs=6,
+    num_train_epochs=3,
 
 
-    per_device_train_batch_size=8,
+    # 工具样本约2700 token,logits 很吃显存,
+    # batch 2 + checkpointing 保 8G 显存,等效 batch 仍为 16
+
+    per_device_train_batch_size=2,
 
 
-    gradient_accumulation_steps=2,
+    gradient_accumulation_steps=8,
 
 
     learning_rate=1e-4,

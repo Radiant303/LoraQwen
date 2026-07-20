@@ -16,9 +16,9 @@ from transformers import (
 
 BASE = r"./SpringNote-Qwen3-0.6B-FIM-V2"
 
-LORA = r"./output-qwen3-0.6-persona-v3"
+LORA = r"./output-qwen3-0.6-persona-v5"
 
-OUTPUT = r"./SpringNote-Qwen3-0.6B-FIM-Persona-V2"
+OUTPUT = r"./SpringNote-Qwen3-0.6B-FIM-Persona-V5"
 
 SCALE = 0.7
 

@@ -9,7 +9,7 @@ from transformers import (
 # 合并模型测试:FIM 补全 + persona 聊天
 # =========================
 
-MODEL = "./SpringNote-Qwen3-0.6B-FIM-Persona-V2"
+MODEL = "./SpringNote-Qwen3-0.6B-FIM-Persona-V4"
 
 tokenizer = AutoTokenizer.from_pretrained(
     MODEL,
