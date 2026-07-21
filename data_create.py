@@ -11,6 +11,17 @@ FIM_MIDDLE = "<|fim_middle|>"
 EOS = "<|im_end|>"
 
 
+# 无需补全样本占比
+# prefix与suffix原本相连
+# 语义完整,middle为空
+NO_COMPLETION_RATIO = 0.06
+
+# 无需补全样本中
+# 切分点落在标点后边界的概率
+# 其余切在任意位置(词语中间)
+BOUNDARY_PROB = 0.6
+
+
 
 # ==========================
 # 清理文本
@@ -148,6 +159,110 @@ def random_middle_length():
 
 
 # ==========================
+# 创建无需补全样本
+# prefix与suffix原本相连
+# 语义完整,middle为空
+# 模型应直接输出EOS
+# ==========================
+
+def create_no_completion_sample(text):
+
+
+    # 部分切在标点边界
+    # 部分切在任意位置
+
+    if random.random()<BOUNDARY_PROB:
+
+
+        bounds=[
+            m.end()
+            for m in re.finditer(
+                r"[，。；：！？]",
+                text
+            )
+        ]
+
+
+        bounds=[
+            b for b in bounds
+            if int(len(text)*0.1)
+               <=b<=
+               int(len(text)*0.9)
+        ]
+
+
+        if bounds:
+
+            pos=random.choice(bounds)
+
+        else:
+
+            pos=random.randint(
+                int(len(text)*0.1),
+                int(len(text)*0.9)
+            )
+
+
+    else:
+
+        pos=random.randint(
+            int(len(text)*0.1),
+            int(len(text)*0.9)
+        )
+
+
+
+    # =====================
+    # 上下文窗口
+    # prefix/suffix直接相连
+    # =====================
+
+    context_size=300
+
+
+    prefix=text[
+        max(
+            0,
+            pos-context_size
+        ):
+        pos
+    ]
+
+
+    suffix=text[
+        pos:
+        min(
+            len(text),
+            pos+context_size
+        )
+    ]
+
+
+
+    if len(prefix)<20:
+
+        return None
+
+
+    if len(suffix)<10:
+
+        return None
+
+
+
+    return (
+        f"{FIM_PREFIX}"
+        f"{prefix}"
+        f"{FIM_SUFFIX}"
+        f"{suffix}"
+        f"{FIM_MIDDLE}"
+        f"{EOS}"
+    )
+
+
+
+
+# ==========================
 # 创建样本
 # ==========================
 
@@ -173,6 +288,39 @@ def create_samples(report):
     # 每条生成多个
 
     for _ in range(8):
+
+
+        # 一定比例生成无需补全样本
+
+        if random.random()<NO_COMPLETION_RATIO:
+
+
+            sample=create_no_completion_sample(
+                text
+            )
+
+
+            if sample is None:
+
+                continue
+
+
+            if sample in used:
+
+                continue
+
+
+            used.add(sample)
+
+
+            samples.append(
+                {
+                    "text":sample
+                }
+            )
+
+
+            continue
 
 
         pos=random.randint(
@@ -292,7 +440,7 @@ def main():
 
     input_file="input.txt"
 
-    output_file="fim_dataset.jsonl"
+    output_file="data/train.jsonl"
 
 
 
