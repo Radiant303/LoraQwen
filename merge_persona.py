@@ -14,11 +14,11 @@ from transformers import (
 #   0.3  persona 开始失效
 # =========================
 
-BASE = r"./SpringNote-Qwen3-0.6B-FIM-V2"
+BASE = r"./SpringNote-Qwen3-1.7B-FIM-V2"
 
-LORA = r"./output-qwen3-0.6-persona-v5"
+LORA = r"./output-qwen3-1.7-persona-v5"
 
-OUTPUT = r"./SpringNote-Qwen3-0.6B-FIM-Persona-V5"
+OUTPUT = r"./SpringNote-Qwen3-1.7B-FIM-Persona-V5"
 
 SCALE = 1.0
 

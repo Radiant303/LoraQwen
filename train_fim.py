@@ -19,9 +19,9 @@ from peft import (
 # 配置 注意此文件建议在5090 32G机器上进行运行
 # =========================
 
-MODEL_PATH = r".\Qwen3-0.6B"
-OUTPUT_DIR = r".\output-qwen3-0.6-fim-v4"
-DATA_PATH = r".\data\train.jsonl"
+MODEL_PATH = "./Qwen3-1.7B"
+OUTPUT_DIR = "./output-qwen3-1.7-fim-v6"
+DATA_PATH = "./data/train.jsonl"
 
 MAX_LENGTH = 1024
 
@@ -375,10 +375,10 @@ training_args = TrainingArguments(
     num_train_epochs=3,
 
 
-    per_device_train_batch_size=4,
+    per_device_train_batch_size=8,
 
 
-    gradient_accumulation_steps=4,
+    gradient_accumulation_steps=2,
 
 
     learning_rate=1e-4,
