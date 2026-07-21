@@ -49,7 +49,7 @@ from peft import (
 # 路径与任务配比
 # =========================
 
-BASE_MODEL = ROOT / "models" / "fim" / "SpringNote-Qwen3-1.7B-FIM-V7"
+BASE_MODEL = ROOT / "models" / "fim" / "SpringNote-Qwen3-1.7B-FIM-V8"
 
 # 多任务数据：人设 + 工具调用 + 思考链（文件不存在自动跳过）
 # repeat 控制任务在训练集中的采样权重：
@@ -80,7 +80,7 @@ TASKS = [
 FIM_REHEARSAL = ROOT / "data" / "train" / "train.jsonl"
 FIM_REHEARSAL_N = 500
 
-OUTPUT = ROOT / "models" / "adapters" / "output-qwen3-1.7-persona-v7"
+OUTPUT = ROOT / "models" / "adapters" / "output-qwen3-1.7-persona-v8"
 
 
 # =========================

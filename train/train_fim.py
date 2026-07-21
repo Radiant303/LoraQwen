@@ -109,7 +109,7 @@ model.print_trainable_parameters()
 
 dataset = load_dataset(
     "json",
-    data_files=DATA_PATH,
+    data_files=str(DATA_PATH),
     split="train"
 )
 
