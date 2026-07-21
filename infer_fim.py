@@ -10,11 +10,11 @@ from peft import PeftModel
 
 
 MODELS = [
-   (
-        "Qwen3-0.6B 原版",
-        r"./Qwen3-0.6B",
-        None
-    ),
+#   (
+#        "Qwen3-0.6B 原版",
+#        r"./Qwen3-0.6B",
+#        None
+#    ),
 #    (
 #        "Qwen3-0.6B + FIM-V5",
 #        r"./Qwen3-0.6B",
@@ -30,10 +30,15 @@ MODELS = [
 #        r"./Qwen3-1.7B",
 #        r"./output-qwen3-1.7-fim-v5"
 #    ),
+#    (
+#        "Qwen3-0.6B-FIM + Persona-V2",
+#        r"./SpringNote-Qwen3-0.6B-FIM",
+#        r"./output-qwen3-0.6-persona-v2"
+#    ),
     (
-        "Qwen3-0.6B-FIM + Persona-V2",
-        r"./SpringNote-Qwen3-0.6B-FIM",
-        r"./output-qwen3-0.6-persona-v2"
+        "Qwen3-1.7B + FIM-V6",
+        r"./SpringNote-Qwen3-1.7B-FIM-V2",
+        None
     )
 
 ]
@@ -44,12 +49,16 @@ MODELS = [
 # ==========================
 
 prefix = """
-Graph 微服务的交互流程也跑通了。整体逻
+# 2026-07-21 日报
+
+今天主要完成了SpringNote 1.0.3版本的发布工作。前端方面，
 """
 
 
 suffix = """
-返回需要调用的工具以及是否需要调用的决策。后续节点判断是否中断，如果信息不足，就通过 SSE 把提示信息发给调用方，调用方可以继续补充信息；信息齐全后进入工具执行节点，执行结果以 PCM 语音格式通过 SSE 推送给用户，最后由 finishNode 发送完成信息。整个交互过程中的消息推送都走 SSE 的 PCM 格式。
+将原本基于Cocos的界面迁移到了Vue框架中，并引入了Pixi.js来优化Canvas渲染性能，整体交互流畅度有了明显提升。
+
+与此同时，开始着手Spring AI Alibaba微服务模块的学习和设计实现，目前处于初步调研和架构设计阶段，后续会逐步推进具体模块的开发。
 """
 
 

@@ -2,9 +2,9 @@ from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
-BASE = "./Qwen3-1.7B"
-LORA = "./output-qwen3-1.7-fim-v5"
-OUTPUT = "./SpringNote-Qwen3-1.7B-FIM"
+BASE = r"./Qwen3-1.7B"
+LORA = r"./output-qwen3-1.7-fim-v6"
+OUTPUT = r"./SpringNote-Qwen3-1.7B-FIM-V2"
 
 
 

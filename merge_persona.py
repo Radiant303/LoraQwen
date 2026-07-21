@@ -20,7 +20,7 @@ LORA = r"./output-qwen3-0.6-persona-v5"
 
 OUTPUT = r"./SpringNote-Qwen3-0.6B-FIM-Persona-V5"
 
-SCALE = 0.7
+SCALE = 1.0
 
 
 base = AutoModelForCausalLM.from_pretrained(
