@@ -134,7 +134,7 @@ uv run python train/train_persona.py
 | 配置 | 值 | 说明 |
 |---|---|---|
 | base | `models/fim/SpringNote-Qwen3-1.7B-FIM-V7` | 第一部分产出的 FIM 底座 |
-| 量化 | 4bit nf4 + fp16 计算 | 8G 显存可跑；A10 上可改全量 fp16 |
+| 精度 | fp16 全量 | 与 FIM 训练统一；8G 显存机器可改回 4bit QLoRA |
 | LoRA | r=32, alpha=64 | |
 | lr | 1e-4 | **不要低于 1e-4**，2e-5 时 LoRA 学不动 |
 | batch | 4 × 累积 4 | 开 gradient checkpointing，等效 batch 16 |

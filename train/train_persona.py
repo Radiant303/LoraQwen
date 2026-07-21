@@ -11,7 +11,8 @@
 #   通过 TASKS 里的 repeat 字段控制各任务采样权重
 # - 开启 gradient_checkpointing（旧版注释说开了但实际是 False），
 #   batch 提到 4×4，等效 batch 仍为 16
-# - 精度保持 fp16，与 FIM 训练统一
+# - 精度统一 fp16：全量 fp16 加载（A10 24G），与 FIM 训练一致；
+#   8G 显存机器可改回 4bit QLoRA
 # =========================
 
 import os
@@ -31,7 +32,6 @@ from datasets import (
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
-    BitsAndBytesConfig,
     TrainingArguments,
     Trainer,
     DataCollatorForSeq2Seq
@@ -41,7 +41,6 @@ from transformers import (
 from peft import (
     LoraConfig,
     get_peft_model,
-    prepare_model_for_kbit_training
 )
 
 
@@ -97,26 +96,22 @@ if tokenizer.pad_token is None:
 
 
 # =========================
-# 4bit（8G 显存可跑；A10 上可改全量 fp16，配方保持不变）
+# fp16 全量加载（A10 24G；与 FIM 训练精度统一）
+# 8G 显存机器可改回 4bit QLoRA（BitsAndBytesConfig + prepare_model_for_kbit_training）
 # =========================
-
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.float16,
-    bnb_4bit_use_double_quant=True
-)
 
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL,
-    quantization_config=bnb_config,
+    dtype=torch.float16,
     device_map="auto",
     trust_remote_code=True
 )
 
 model.config.use_cache = False
 
-model = prepare_model_for_kbit_training(model)
+# gradient checkpointing + 冻结基底时，需要输入梯度，
+# 否则 LoRA 参数收不到梯度
+model.enable_input_require_grads()
 
 
 # =========================
@@ -268,8 +263,8 @@ args = TrainingArguments(
     output_dir=OUTPUT,
     num_train_epochs=3,
 
-    # 工具样本约 2700 token，logits 很吃显存，
-    # batch 4 + gradient checkpointing 保 8G 显存，等效 batch 仍为 16
+    # 工具样本约 2700 token，fp16 logits + CE 上采样 fp32 很吃显存，
+    # batch 4 + gradient checkpointing 在 A10 24G 上留有余量，等效 batch 16
     per_device_train_batch_size=4,
     gradient_accumulation_steps=4,
     gradient_checkpointing=True,
@@ -285,7 +280,7 @@ args = TrainingArguments(
     metric_for_best_model="loss",
     greater_is_better=False,
 
-    optim="paged_adamw_8bit",
+    optim="adamw_torch_fused",
     warmup_ratio=0.05,
     lr_scheduler_type="cosine",
     report_to="none",
