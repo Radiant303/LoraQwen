@@ -18,11 +18,11 @@ from transformers import (
 )
 
 ROOT = Path(__file__).resolve().parent.parent
-BASE = ROOT / "models" / "fim" / "SpringNote-Qwen3-1.7B-FIM-V7"
+BASE = ROOT / "models" / "fim" / "SpringNote-Qwen3-1.7B-FIM-V8"
 
-LORA = ROOT / "models" / "adapters" / "output-qwen3-1.7-persona-v7"
+LORA = ROOT / "models" / "adapters" / "output-qwen3-1.7-persona-v8"
 
-OUTPUT = ROOT / "models" / "persona" / "SpringNote-Qwen3-1.7B-FIM-Persona-V7"
+OUTPUT = ROOT / "models" / "persona" / "SpringNote-Qwen3-1.7B-FIM-Persona-V8"
 
 SCALE = 1.0
 

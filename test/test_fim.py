@@ -47,8 +47,8 @@ MODELS = [
 #        ROOT / "models" / "adapters" / "output-qwen3-0.6-persona-v2"
 #    ),
     (
-        "Qwen3-1.7B + FIM-V7",
-        ROOT / "models" / "fim" / "SpringNote-Qwen3-1.7B-FIM-V7",
+        "Qwen3-1.7B + FIM-V8",
+        ROOT / "models" / "fim" / "SpringNote-Qwen3-1.7B-FIM-V8",
         None
     )
 
