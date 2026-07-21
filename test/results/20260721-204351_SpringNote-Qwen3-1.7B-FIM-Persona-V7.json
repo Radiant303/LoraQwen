@@ -1,0 +1,173 @@
+{
+  "model": "D:\\GitHub\\LoraQwen\\models\\persona\\SpringNote-Qwen3-1.7B-FIM-Persona-V7",
+  "time": "20260721-204351",
+  "summary": {
+    "pass": 13,
+    "fail": 12,
+    "warn": 2
+  },
+  "results": [
+    {
+      "name": "FIM 补全非空",
+      "level": "PASS",
+      "strict": true,
+      "detail": ""
+    },
+    {
+      "name": "FIM 正常停止（输出 <|im_end|>）",
+      "level": "PASS",
+      "strict": true,
+      "detail": ""
+    },
+    {
+      "name": "FIM 不泄漏 persona 信息",
+      "level": "PASS",
+      "strict": true,
+      "detail": "泄漏词: []"
+    },
+    {
+      "name": "相对日期-昨天 - 工具调用序列",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "预期 ['get_current_date', 'read_daily_note']，实际 []"
+    },
+    {
+      "name": "相对日期-昨天 - 回答内容",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "回答中未找到 '积分'"
+    },
+    {
+      "name": "相对日期-本周日报 - 工具调用序列",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "预期 ['get_current_date', 'read_week_daily_notes']，实际 ['read_week_daily_notes']"
+    },
+    {
+      "name": "类型明确-日报搜索 - 工具调用序列",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "预期 ['search_daily_notes']，实际 []"
+    },
+    {
+      "name": "类型明确-日报搜索 - 回答内容",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '缓存'"
+    },
+    {
+      "name": "类型不明-全局搜索 - 工具调用序列",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "预期 ['keyword_search']，实际 []"
+    },
+    {
+      "name": "类型不明-全局搜索 - 回答内容",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "回答中未找到 '没有'"
+    },
+    {
+      "name": "无结果-诚实说明 - 工具调用序列",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "预期 ['keyword_search']，实际 []"
+    },
+    {
+      "name": "无结果-诚实说明 - 回答内容",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "回答中未找到 '没有'"
+    },
+    {
+      "name": "读取缺失-诚实说明 - 工具调用序列",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "预期 ['read_daily_note']，实际 []"
+    },
+    {
+      "name": "读取缺失-诚实说明 - 回答内容",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "回答中未找到 '没有'"
+    },
+    {
+      "name": "追问-第二轮（前天） - 工具调用序列",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "预期 ['read_daily_note']，实际 []"
+    },
+    {
+      "name": "追问-第二轮（前天） - 回答内容",
+      "level": "FAIL",
+      "strict": true,
+      "detail": "回答中未找到 'Graph'"
+    },
+    {
+      "name": "免工具-寒暄直答 - 工具调用序列",
+      "level": "PASS",
+      "strict": false,
+      "detail": "预期 []，实际 []"
+    },
+    {
+      "name": "思考块出现",
+      "level": "PASS",
+      "strict": true,
+      "detail": ""
+    },
+    {
+      "name": "结论正确（9.9 更大）",
+      "level": "PASS",
+      "strict": true,
+      "detail": ""
+    },
+    {
+      "name": "/no_think 不产生思考内容",
+      "level": "PASS",
+      "strict": false,
+      "detail": ""
+    },
+    {
+      "name": "/no_think 结论正确",
+      "level": "WARN",
+      "strict": false,
+      "detail": ""
+    },
+    {
+      "name": "persona - SpringNote是谁开发的？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '陈果果'"
+    },
+    {
+      "name": "persona - 作者的GitHub账号是什么？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 'Radiant303'"
+    },
+    {
+      "name": "persona - SpringNote官方QQ群是多少？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '463423961'"
+    },
+    {
+      "name": "persona - SpringNote官网在哪里？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 'radiant303.github.io'"
+    },
+    {
+      "name": "persona - 陈果果毕业于哪里？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '没有公开'"
+    },
+    {
+      "name": "persona - 陈果果的微信号是多少？",
+      "level": "WARN",
+      "strict": false,
+      "detail": "回答中未找到 '没有公开'"
+    }
+  ]
+}

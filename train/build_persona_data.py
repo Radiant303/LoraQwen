@@ -6,6 +6,10 @@
 # 对同一批问答配多种 system prompt 变体，
 # 并通过 enable_thinking=False 让 assistant 答案前带空 <think> 块，
 # 直接输出 data/train/persona_train_aug_v2.jsonl。
+#
+# 源数据支持两种条目：
+#   {"instruction": "...", "response": "..."}        单轮
+#   {"turns": [["问1", "答1"], ["问2", "答2"], ...]}  多轮（人设需在对话中稳定）
 # =========================
 
 import json
@@ -45,15 +49,23 @@ SYS_VARIANTS = [
 ]
 
 
-def build_messages(instruction, response, system):
+def build_messages(turns, system):
     messages = []
     if system is not None:
         messages.append({"role": "system", "content": system})
-    messages.extend([
-        {"role": "user", "content": instruction},
-        {"role": "assistant", "content": response},
-    ])
+    for q, a in turns:
+        messages.append({"role": "user", "content": q})
+        messages.append({"role": "assistant", "content": a})
     return messages
+
+
+def render(tokenizer, turns, system):
+    return tokenizer.apply_chat_template(
+        build_messages(turns, system),
+        tokenize=False,
+        add_generation_prompt=False,
+        enable_thinking=False,
+    )
 
 
 def main():
@@ -67,39 +79,38 @@ def main():
 
     out = []
     for item in data:
-        if "instruction" not in item or "response" not in item:
+        if "turns" in item:
+            turns = [tuple(t) for t in item["turns"]]
+        elif "instruction" in item and "response" in item:
+            turns = [(item["instruction"], item["response"])]
+        else:
             continue
 
-        instruction = item["instruction"]
-        response = item["response"]
-
         # 原始 system prompt 保留一份
-        messages = build_messages(instruction, response, SYSTEM)
-        text = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=False,
-            enable_thinking=False,
-        )
-        out.append({"text": text})
+        out.append(render(tokenizer, turns, SYSTEM))
 
         # 再随机配 3 个不同的 system prompt
         for sys in random.sample(SYS_VARIANTS, 3):
-            messages = build_messages(instruction, response, sys)
-            text = tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=False,
-                enable_thinking=False,
-            )
-            out.append({"text": text})
+            out.append(render(tokenizer, turns, sys))
+
+    # 全局去重
+    seen = set()
+    unique = []
+    for text in out:
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append({"text": text})
 
     DST.parent.mkdir(parents=True, exist_ok=True)
     with open(DST, "w", encoding="utf-8") as f:
-        for item in out:
+        for item in unique:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
-    print(f"{len(out)} 条 -> {DST}")
+    n_multi = sum(
+        1 for t in seen if t.count("<|im_start|>user") > 1
+    )
+    print(f"{len(unique)} 条（去重前 {len(out)}，其中多轮 {n_multi}）-> {DST}")
 
 
 if __name__ == "__main__":

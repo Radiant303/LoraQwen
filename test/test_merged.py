@@ -1,16 +1,33 @@
 # =========================
-# 合并模型测试：FIM 补全 + tool 调用 + think 思考 + persona 聊天
+# 合并模型验收测试：FIM 补全 + tool 调用 + think 思考 + persona 聊天
 # 位置：test/test_merged.py
 #
-# 加载合并后的模型，对四类能力进行端到端验证。
+# 与旧版的差异：
+# - 默认加载合并后的 persona 模型（旧版指向纯 FIM 底座，persona/tool/think
+#   三项验收根本没测到 persona 权重）；可用 --model 指定任意模型
+# - system prompt 统一为线上原版（旧版用了一套更长的"增强版"，训练、测试、
+#   线上三方不一致，测试结果没有代表性）
+# - 全部用例改为断言式，输出 PASS/FAIL 汇总并以退出码标记结果，
+#   报告存档到 test/results/ 供版本间回归对比
+# - 解码统一 greedy（do_sample=False），结果可复现
+#   （线上 tools 请求用 temperature=0.2，接近确定性；抽样评测每次不可比）
+#
+# 用法：
+#   uv run python test/test_merged.py
+#   uv run python test/test_merged.py --model models/fim/SpringNote-Qwen3-1.7B-FIM-V7
+#
+# strict=False 的用例是新数据才训练的行为（如 /no_think、免工具直答），
+# 对旧模型只警告不计失败。
 # =========================
 
+import argparse
 import json
 import re
+import sys
+import time
 from pathlib import Path
 
 import torch
-
 
 ROOT = Path(__file__).resolve().parent.parent
 from transformers import (
@@ -18,128 +35,20 @@ from transformers import (
     AutoTokenizer,
 )
 
-MODEL = ROOT / "models" / "fim" / "SpringNote-Qwen3-1.7B-FIM-V7"
+DEFAULT_MODEL = ROOT / "models" / "persona" / "SpringNote-Qwen3-1.7B-FIM-Persona-V7"
+
+MAX_ITER = 5
 
 # 伪造的笔记根路径（仅用于测试数据的 path 字段）
 FAKE_NOTES_BASE = "D:/SpringNote/notes"
 
-MAX_ITER = 5
-MAX_NEW_TOKENS = 256
-
-# ---------- 内联工具定义（不依赖外部数据生成脚本） ----------
-
+# 与线上 MEMORY_TOOL_SYSTEM_PROMPT 原文一致（同 train/build_tools_data.py）
 SYSTEM = (
-    "你是 SpringNote 的回忆书问答助手。\n"
-    "你的唯一数据来源是用户保存的日报、周报、月报等历史记录。\n"
-    "禁止根据模型记忆、常识、示例内容推测用户历史。\n\n"
-
-    "====================\n"
-    "【最高优先级规则】\n"
-    "====================\n"
-
-    "1. 用户询问任何个人历史记录时，必须调用工具获取真实数据。\n"
-    "2. 工具调用必须形成完整链路，不能停留在中间步骤。\n"
-    "3. 如果调用了辅助工具（例如 get_current_date），必须继续调用最终数据读取工具。\n"
-    "4. 获取日期不是回答目的，只是为了确定查询参数。\n\n"
-
-    "错误示例：\n"
-    "用户：我昨天日报写了什么？\n"
-    "调用：get_current_date\n"
-    "回答：昨天是xxx\n"
-    "这是错误行为。\n\n"
-
-    "正确流程：\n"
-    "用户：我昨天日报写了什么？\n"
-    "调用：get_current_date\n"
-    "计算昨天日期\n"
-    "调用：read_daily_note(date=昨天日期)\n"
-    "根据日报内容回答。\n\n"
-
-
-    "====================\n"
-    "【时间解析规则】\n"
-    "====================\n"
-
-    "1. 出现以下时间表达：\n"
-    "今天、昨天、前天、最近、本周、这周、上周、本月、这个月\n"
-    "必须先获取当前日期。\n\n"
-
-    "2. 相对日期必须转换为绝对日期后继续查询。\n\n"
-
-    "例如：\n"
-    "昨天 -> get_current_date -> read_daily_note\n"
-    "前天 -> 根据上下文已有日期 -> read_daily_note\n"
-    "本周 -> get_current_date -> read_week_daily_notes\n\n"
-
-
-    "====================\n"
-    "【工具选择规则】\n"
-    "====================\n"
-
-    "用户问题 -> 必须使用工具：\n\n"
-
-    "1. '我的日报写了什么'\n"
-    "   '某天日报是什么'\n"
-    "   '昨天日报'\n"
-    "   '前天日报'\n"
-    "   -> read_daily_note\n\n"
-
-    "2. '这周做了什么'\n"
-    "   '本周总结'\n"
-    "   '最近一周工作'\n"
-    "   -> read_week_daily_notes\n\n"
-
-    "3. '有没有记录过xxx'\n"
-    "   '我做过xxx吗'\n"
-    "   '关于xxx有没有内容'\n"
-    "   不确定记录类型\n"
-    "   -> keyword_search\n\n"
-
-    "4. 用户明确说：\n"
-    "'在日报里搜xxx'\n"
-    "'日报搜索xxx'\n"
-    "   -> search_daily_notes\n\n"
-
-
-    "====================\n"
-    "【禁止行为】\n"
-    "====================\n"
-
-    "禁止：\n"
-    "1. 没调用工具直接回答历史事实。\n"
-    "2. 编造不存在的日报、周报内容。\n"
-    "3. 调用 get_current_date 后直接结束。\n"
-    "4. 调用工具后说'如果需要我可以查询'。\n"
-    "5. 用户已经明确需求后要求用户再次确认。\n\n"
-
-
-    "====================\n"
-    "【多轮对话规则】\n"
-    "====================\n"
-
-    "必须结合完整历史消息理解省略表达。\n\n"
-
-    "例如：\n"
-    "用户：我昨天的日报写了什么？\n"
-    "助手：正在查询昨天日报。\n"
-    "用户：那前天呢？\n\n"
-
-    "此时：\n"
-    "前天 = 昨天日期 - 1天\n"
-    "直接调用 read_daily_note。\n"
-    "不要重新解释日期。\n"
-    "不要只返回日期。\n\n"
-
-
-    "====================\n"
-    "【回答规则】\n"
-    "====================\n"
-
-    "1. 必须等待工具返回结果后回答。\n"
-    "2. 只使用工具返回的信息。\n"
-    "3. 没有记录：明确说明没有找到。\n"
-    "4. 不允许推测、补充不存在的信息。\n"
-    "5. 使用自然中文 Markdown 输出。\n"
+    "你是 SpringNote 的回忆书问答助手。你必须基于用户的历史日报、周报、月报回答问题。\n"
+    "你可以自主调用工具检索或读取记录；需要信息时先调用工具，不要让应用预先替你检索。\n"
+    "连续追问时结合完整消息历史理解省略指代，例如“什么时候”“这个配置”“刚才说的”等。\n"
+    "回答必须只依据工具返回和对话上下文；材料不足时明确说明缺少依据，不要编造事实。\n"
+    "最终回答使用自然中文和清晰 Markdown，不要输出工具调用 JSON。"
 )
 
 
@@ -259,7 +168,35 @@ TOOLS = [
     ),
 ]
 
-# ---------- 加载模型 ----------
+# ---------- 结果记录 ----------
+
+RESULTS = []
+
+
+def check(name, ok, detail="", strict=True):
+    level = "PASS" if ok else ("FAIL" if strict else "WARN")
+    RESULTS.append({
+        "name": name,
+        "level": level,
+        "strict": strict,
+        "detail": detail,
+    })
+    mark = {"PASS": "✓", "FAIL": "✗", "WARN": "!"}[level]
+    print(f"  [{mark}] {name}" + (f"  -- {detail}" if detail and not ok else ""))
+
+
+# ---------- 模型 ----------
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--model", default=str(DEFAULT_MODEL), help="待测模型目录")
+parser.add_argument("--max-new-tokens", type=int, default=256)
+parser.add_argument("--tag", default="", help="报告文件名附加标签")
+args = parser.parse_args()
+
+MODEL = Path(args.model)
+MAX_NEW_TOKENS = args.max_new_tokens
+
+print(f"加载模型: {MODEL}")
 
 tokenizer = AutoTokenizer.from_pretrained(
     MODEL,
@@ -277,26 +214,20 @@ model.eval()
 
 
 # =========================
-# 通用生成函数
+# 通用生成函数（greedy，可复现）
 # =========================
 
-def gen_raw(prompt, n=128, enable_thinking=False):
+def gen_raw(prompt, n=MAX_NEW_TOKENS):
     inputs = tokenizer(
         prompt,
         return_tensors="pt"
     ).to(model.device)
 
-    # Qwen3 推荐参数：思考 temp=0.6/top_p=0.95；非思考 temp=0.7/top_p=0.8
-    if enable_thinking:
-        gen_kwargs = {"temperature": 0.6, "top_p": 0.95}
-    else:
-        gen_kwargs = {"temperature": 0.7, "top_p": 0.8}
-
     with torch.no_grad():
         out = model.generate(
             **inputs,
             max_new_tokens=n,
-            **gen_kwargs,
+            do_sample=False,
         )
 
     return tokenizer.decode(
@@ -313,7 +244,7 @@ def generate(messages, tools=None, enable_thinking=False):
         add_generation_prompt=True,
         enable_thinking=enable_thinking,
     )
-    return gen_raw(prompt, n=MAX_NEW_TOKENS, enable_thinking=enable_thinking)
+    return gen_raw(prompt)
 
 
 # =========================
@@ -336,15 +267,21 @@ def test_fim():
         + "<|fim_middle|>"
     )
 
-    print("=" * 70)
+    print("\n" + "=" * 70)
     print("【FIM 补全测试】")
-    middle = gen_raw(fim_prompt).split("<|im_end|>")[0].strip()
-    print("=======prefix======")
-    print(prefix)
-    print("=======middle======")
+    raw = gen_raw(fim_prompt)
+    middle = raw.split("<|im_end|>")[0].strip()
+
+    print("=======middle=======")
     print(middle)
-    print("=======suffix======")
-    print(suffix)
+
+    check("FIM 补全非空", len(middle) > 0)
+    check(
+        "FIM 正常停止（输出 <|im_end|>）",
+        "<|im_end|>" in raw,
+    )
+    leaked = [w for w in ("陈果果", "Radiant303", "463423961", "QQ群") if w in middle]
+    check("FIM 不泄漏 persona 信息", not leaked, f"泄漏词: {leaked}")
 
 
 # =========================
@@ -504,8 +441,10 @@ def parse_tool_calls(text):
     return calls
 
 
-def run_tool_case(name, user_content, history=None, expected_tools=None):
-    print("\n" + "=" * 70)
+def run_tool_case(name, user_content, history=None,
+                  expected_tools=None, expect_in_answer=None,
+                  strict=True):
+    print("\n" + "-" * 70)
     print(f"[用例] {name}")
     print(f"用户: {user_content}")
 
@@ -527,7 +466,7 @@ def run_tool_case(name, user_content, history=None, expected_tools=None):
 
         all_tool_calls.extend(calls)
 
-        assistant_tool_msg = {
+        messages.append({
             "role": "assistant",
             "tool_calls": [
                 {
@@ -537,10 +476,9 @@ def run_tool_case(name, user_content, history=None, expected_tools=None):
                 }
                 for c in calls
             ],
-        }
-        messages.append(assistant_tool_msg)
+        })
 
-        for idx, c in enumerate(calls):
+        for c in calls:
             result = execute_tool(c["name"], c["arguments"])
             messages.append({
                 "role": "tool",
@@ -550,22 +488,25 @@ def run_tool_case(name, user_content, history=None, expected_tools=None):
     else:
         final_answer = "[达到最大迭代次数，未得到最终回答]"
 
-    print("\n调用链路:")
-    if not all_tool_calls:
-        print("  (无工具调用，直接回答)")
-    for c in all_tool_calls:
-        print(f"  -> {c['name']}({c['arguments']})")
-
-    print("\n最终回答:")
-    print(final_answer)
+    actual_tools = [c["name"] for c in all_tool_calls]
+    print(f"调用链路: {actual_tools or '(无工具调用，直接回答)'}")
+    print(f"最终回答: {final_answer}")
 
     if expected_tools is not None:
-        actual = [c["name"] for c in all_tool_calls]
-        if actual == expected_tools:
-            print("\n[✓] 工具调用顺序符合预期")
-        else:
-            print(f"\n[✗] 预期: {expected_tools}")
-            print(f"    实际: {actual}")
+        check(
+            f"{name} - 工具调用序列",
+            actual_tools == expected_tools,
+            f"预期 {expected_tools}，实际 {actual_tools}",
+            strict=strict,
+        )
+
+    if expect_in_answer is not None and final_answer is not None:
+        check(
+            f"{name} - 回答内容",
+            expect_in_answer in final_answer,
+            f"回答中未找到 {expect_in_answer!r}",
+            strict=strict,
+        )
 
     return all_tool_calls, final_answer
 
@@ -575,55 +516,69 @@ def test_tools():
     print("【tool 调用测试】")
 
     run_tool_case(
-        "相对日期 - 昨天",
+        "相对日期-昨天",
         "我昨天的日报写了什么？",
         expected_tools=["get_current_date", "read_daily_note"],
+        expect_in_answer="积分",
     )
 
     run_tool_case(
-        "相对日期 - 本周日报",
+        "相对日期-本周日报",
         "这周我都做了什么？",
         expected_tools=["get_current_date", "read_week_daily_notes"],
     )
 
     run_tool_case(
-        "类型明确 - 日报搜索",
+        "类型明确-日报搜索",
         "在日报里搜一下缓存",
         expected_tools=["search_daily_notes"],
+        expect_in_answer="缓存",
     )
 
     run_tool_case(
-        "类型不明 - 全局搜索",
+        "类型不明-全局搜索",
         "我有没有记录过 Kafka 相关的事？",
         expected_tools=["keyword_search"],
+        expect_in_answer="没有",
     )
 
     run_tool_case(
-        "无结果 - 诚实说明",
+        "无结果-诚实说明",
         "我记过健身相关的内容吗？",
-        expected_tools=["search_daily_notes"],
+        expected_tools=["keyword_search"],
+        expect_in_answer="没有",
     )
 
     run_tool_case(
-        "读取缺失 - 诚实说明",
+        "读取缺失-诚实说明",
         "2026-01-01 的日报写了什么？",
         expected_tools=["read_daily_note"],
+        expect_in_answer="没有",
     )
 
     # 追问
     history = []
     _, ans1 = run_tool_case(
-        "追问 - 第一轮",
+        "追问-第一轮",
         "我昨天的日报写了什么？",
         history=history,
     )
     history.append({"role": "user", "content": "我昨天的日报写了什么？"})
     history.append({"role": "assistant", "content": ans1})
     run_tool_case(
-        "追问 - 第二轮（前天）",
+        "追问-第二轮（前天）",
         "那前天呢？",
         history=history,
         expected_tools=["read_daily_note"],
+        expect_in_answer="Graph",
+    )
+
+    # 新行为：免工具直答（新数据才训练，旧模型只警告）
+    run_tool_case(
+        "免工具-寒暄直答",
+        "你好",
+        expected_tools=[],
+        strict=False,
     )
 
 
@@ -644,10 +599,34 @@ def test_thinking():
 
     print("模型输出:")
     print(answer[:500])
-    if "<think>" in answer:
-        print("\n[✓] 包含思考块")
-    else:
-        print("\n[✗] 未出现思考块")
+
+    check("思考块出现", "<think>" in answer)
+    check("结论正确（9.9 更大）", "9.9" in answer)
+
+    # 新行为：/no_think 软开关（新数据才训练，旧模型只警告）
+    messages = [
+        {"role": "system", "content": "你是一个乐于助人的AI助手。"},
+        {"role": "user", "content": "/no_think 9.11 和 9.9 哪个大？"}
+    ]
+    text = generate(messages, enable_thinking=True)
+    answer = text.split("<|im_end|>")[0].strip()
+    think_body = ""
+    m = re.search(r"<think>\s*(.*?)\s*</think>", answer, re.S)
+    if m:
+        think_body = m.group(1)
+
+    print("/no_think 输出:")
+    print(answer[:300])
+    check(
+        "/no_think 不产生思考内容",
+        "<think>" not in answer or len(think_body) < 10,
+        strict=False,
+    )
+    check(
+        "/no_think 结论正确",
+        "9.9 更大" in answer or "9.9更大" in answer,
+        strict=False,
+    )
 
 
 # =========================
@@ -663,21 +642,22 @@ def test_persona():
         "- 简洁\n"
         "- 不编造信息\n"
         "- 不知道的信息明确说明"
-
     )
 
-    questions = [
-        "SpringNote是谁开发的？",
-        "陈果果毕业于哪里？",
-        "SpringNote官方QQ群是多少？",
-        "怎么联系SpringNote作者？",
-        "SpringNote官网在哪里？",
+    # (问题, 期望出现在回答中的字符串, strict)
+    cases = [
+        ("SpringNote是谁开发的？", "陈果果", True),
+        ("作者的GitHub账号是什么？", "Radiant303", True),
+        ("SpringNote官方QQ群是多少？", "463423961", True),
+        ("SpringNote官网在哪里？", "radiant303.github.io", True),
+        ("陈果果毕业于哪里？", "没有公开", True),
+        ("陈果果的微信号是多少？", "没有公开", False),  # 新拒答数据
     ]
 
     print("\n" + "=" * 70)
     print("【persona 聊天测试】")
 
-    for q in questions:
+    for q, expect, strict in cases:
         prompt = tokenizer.apply_chat_template(
             [
                 {"role": "system", "content": persona_sys},
@@ -689,17 +669,56 @@ def test_persona():
         )
         ans = gen_raw(prompt).split("<|im_end|>")[0].strip()
 
-        print()
-        print("Q:", q)
-        print("A:", ans)
+        print(f"\nQ: {q}")
+        print(f"A: {ans}")
+        check(
+            f"persona - {q}",
+            expect in ans,
+            f"回答中未找到 {expect!r}",
+            strict=strict,
+        )
 
 
 # =========================
-# 主入口
+# 汇总与存档
 # =========================
+
+def summarize():
+    n_pass = sum(1 for r in RESULTS if r["level"] == "PASS")
+    n_fail = sum(1 for r in RESULTS if r["level"] == "FAIL")
+    n_warn = sum(1 for r in RESULTS if r["level"] == "WARN")
+
+    print("\n" + "=" * 70)
+    print(f"验收汇总: PASS {n_pass}  FAIL {n_fail}  WARN(新行为待重训) {n_warn}")
+    if n_fail:
+        print("失败用例:")
+        for r in RESULTS:
+            if r["level"] == "FAIL":
+                print(f"  - {r['name']}: {r['detail']}")
+
+    out_dir = ROOT / "test" / "results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    tag = f"_{args.tag}" if args.tag else ""
+    report = out_dir / f"{ts}_{MODEL.name}{tag}.json"
+    report.write_text(
+        json.dumps({
+            "model": str(MODEL),
+            "time": ts,
+            "summary": {"pass": n_pass, "fail": n_fail, "warn": n_warn},
+            "results": RESULTS,
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"报告已存档: {report}")
+
+    return n_fail == 0
+
 
 if __name__ == "__main__":
     test_fim()
     test_tools()
     test_thinking()
     test_persona()
+    ok = summarize()
+    sys.exit(0 if ok else 1)
