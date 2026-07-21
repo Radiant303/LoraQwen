@@ -172,6 +172,9 @@ TOOLS = [
 
 RESULTS = []
 
+# 各用例的完整对话/输出记录，随报告存档，便于事后查看模型实际输出
+TRANSCRIPTS = {}
+
 
 def check(name, ok, detail="", strict=True):
     level = "PASS" if ok else ("FAIL" if strict else "WARN")
@@ -272,8 +275,18 @@ def test_fim():
     raw = gen_raw(fim_prompt)
     middle = raw.split("<|im_end|>")[0].strip()
 
-    print("=======middle=======")
+    print("=======上文 prefix=======")
+    print(prefix)
+    print("=======补全 middle=======")
     print(middle)
+    print("=======下文 suffix=======")
+    print(suffix)
+
+    TRANSCRIPTS["FIM 补全"] = (
+        f"【上文 prefix】\n{prefix}\n\n"
+        f"【补全 middle】\n{middle}\n\n"
+        f"【下文 suffix】\n{suffix}"
+    )
 
     check("FIM 补全非空", len(middle) > 0)
     check(
@@ -453,18 +466,32 @@ def run_tool_case(name, user_content, history=None,
         messages.extend(history)
     messages.append({"role": "user", "content": user_content})
 
+    transcript = [f"[用例] {name}", f"用户: {user_content}"]
+
     all_tool_calls = []
     final_answer = None
 
     for step in range(MAX_ITER):
-        text = generate(messages, tools=TOOLS)
+        # 与线上渲染一致：不传 enable_thinking（等价 True），
+        # prompt 以 assistant\n 结尾——训练里 tool_call 段正是这个开头。
+        # enable_thinking=False 会强制补空 think 块，而训练数据中
+        # tool_call 段从不带 think 前缀，推理格式会对不上。
+        text = generate(messages, tools=TOOLS, enable_thinking=True)
         calls = parse_tool_calls(text)
+        model_out = text.split("<|im_end|>")[0].strip()
 
         if not calls:
-            final_answer = text.split("<|im_end|>")[0].strip()
+            final_answer = model_out
+            # 最终回答也记入消息历史，供多轮用例回放（与线上历史一致）
+            messages.append({"role": "assistant", "content": model_out})
             break
 
         all_tool_calls.extend(calls)
+
+        # 打印本轮模型的 tool_call 输出，直观看调用过程
+        print(f"\n[第 {step + 1} 轮] 模型输出:")
+        print(model_out)
+        transcript.append(f"[第 {step + 1} 轮] 模型输出:\n{model_out}")
 
         messages.append({
             "role": "assistant",
@@ -480,6 +507,11 @@ def run_tool_case(name, user_content, history=None,
 
         for c in calls:
             result = execute_tool(c["name"], c["arguments"])
+            brief = json.dumps(result, ensure_ascii=False)
+            if len(brief) > 300:
+                brief = brief[:300] + " …(截断)"
+            print(f"  工具返回 {c['name']}: {brief}")
+            transcript.append(f"工具返回 {c['name']}: {brief}")
             messages.append({
                 "role": "tool",
                 "tool_call_id": f"call_{step + 1}",
@@ -489,8 +521,12 @@ def run_tool_case(name, user_content, history=None,
         final_answer = "[达到最大迭代次数，未得到最终回答]"
 
     actual_tools = [c["name"] for c in all_tool_calls]
-    print(f"调用链路: {actual_tools or '(无工具调用，直接回答)'}")
+    print(f"\n调用链路: {actual_tools or '(无工具调用，直接回答)'}")
     print(f"最终回答: {final_answer}")
+    transcript.append(
+        f"调用链路: {actual_tools}\n最终回答: {final_answer}"
+    )
+    TRANSCRIPTS[name] = "\n\n".join(transcript)
 
     if expected_tools is not None:
         check(
@@ -508,7 +544,7 @@ def run_tool_case(name, user_content, history=None,
             strict=strict,
         )
 
-    return all_tool_calls, final_answer
+    return all_tool_calls, final_answer, messages
 
 
 def test_tools():
@@ -556,15 +592,14 @@ def test_tools():
         expect_in_answer="没有",
     )
 
-    # 追问
-    history = []
-    _, ans1 = run_tool_case(
+    # 追问：历史回放第一轮完整消息（含工具调用与返回），
+    # 与线上"完整消息历史"一致；只带 user/assistant 会让模型以为
+    # 这个会话不调工具，属于测试侧制造的错误分布
+    _, _, history = run_tool_case(
         "追问-第一轮",
         "我昨天的日报写了什么？",
-        history=history,
     )
-    history.append({"role": "user", "content": "我昨天的日报写了什么？"})
-    history.append({"role": "assistant", "content": ans1})
+    history = history[1:]  # 去掉 system，run_tool_case 会重新加
     run_tool_case(
         "追问-第二轮（前天）",
         "那前天呢？",
@@ -599,9 +634,13 @@ def test_thinking():
 
     print("模型输出:")
     print(answer[:500])
+    TRANSCRIPTS["think-思考"] = answer
 
     check("思考块出现", "<think>" in answer)
-    check("结论正确（9.9 更大）", "9.9" in answer)
+    check(
+        "结论正确（9.9 更大）",
+        "9.9 更大" in answer or "9.9更大" in answer,
+    )
 
     # 新行为：/no_think 软开关（新数据才训练，旧模型只警告）
     messages = [
@@ -617,6 +656,7 @@ def test_thinking():
 
     print("/no_think 输出:")
     print(answer[:300])
+    TRANSCRIPTS["think-/no_think"] = answer
     check(
         "/no_think 不产生思考内容",
         "<think>" not in answer or len(think_body) < 10,
@@ -634,9 +674,12 @@ def test_thinking():
 # =========================
 
 def test_persona():
+    # 与 README §2.6 推荐的生产 system prompt 一字不差（同 build_persona_data.py）
     persona_sys = (
         "你是SpringNote官方AI助手。\n\n"
-        "你的职责是帮助用户了解SpringNote、整理知识、处理笔记相关任务。\n\n"
+        "你由陈果果基于Qwen3模型微调开发。\n\n"
+        "你的职责是帮助用户了解SpringNote、\n"
+        "整理知识、处理笔记相关任务。\n\n"
         "回答要求：\n"
         "- 准确\n"
         "- 简洁\n"
@@ -657,6 +700,7 @@ def test_persona():
     print("\n" + "=" * 70)
     print("【persona 聊天测试】")
 
+    qa_lines = []
     for q, expect, strict in cases:
         prompt = tokenizer.apply_chat_template(
             [
@@ -671,12 +715,15 @@ def test_persona():
 
         print(f"\nQ: {q}")
         print(f"A: {ans}")
+        qa_lines.append(f"Q: {q}\nA: {ans}")
         check(
             f"persona - {q}",
             expect in ans,
             f"回答中未找到 {expect!r}",
             strict=strict,
         )
+
+    TRANSCRIPTS["persona 聊天"] = "\n\n".join(qa_lines)
 
 
 # =========================
@@ -707,6 +754,7 @@ def summarize():
             "time": ts,
             "summary": {"pass": n_pass, "fail": n_fail, "warn": n_warn},
             "results": RESULTS,
+            "transcripts": TRANSCRIPTS,
         }, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )

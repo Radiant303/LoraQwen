@@ -1,0 +1,188 @@
+{
+  "model": "D:\\GitHub\\LoraQwen\\models\\persona\\SpringNote-Qwen3-1.7B-FIM-Persona-V7",
+  "time": "20260721-210021",
+  "summary": {
+    "pass": 23,
+    "fail": 1,
+    "warn": 3
+  },
+  "results": [
+    {
+      "name": "FIM 补全非空",
+      "level": "PASS",
+      "strict": true,
+      "detail": ""
+    },
+    {
+      "name": "FIM 正常停止（输出 <|im_end|>）",
+      "level": "PASS",
+      "strict": true,
+      "detail": ""
+    },
+    {
+      "name": "FIM 不泄漏 persona 信息",
+      "level": "PASS",
+      "strict": true,
+      "detail": "泄漏词: []"
+    },
+    {
+      "name": "相对日期-昨天 - 工具调用序列",
+      "level": "PASS",
+      "strict": true,
+      "detail": "预期 ['get_current_date', 'read_daily_note']，实际 ['get_current_date', 'read_daily_note']"
+    },
+    {
+      "name": "相对日期-昨天 - 回答内容",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '积分'"
+    },
+    {
+      "name": "相对日期-本周日报 - 工具调用序列",
+      "level": "PASS",
+      "strict": true,
+      "detail": "预期 ['get_current_date', 'read_week_daily_notes']，实际 ['get_current_date', 'read_week_daily_notes']"
+    },
+    {
+      "name": "类型明确-日报搜索 - 工具调用序列",
+      "level": "PASS",
+      "strict": true,
+      "detail": "预期 ['search_daily_notes']，实际 ['search_daily_notes']"
+    },
+    {
+      "name": "类型明确-日报搜索 - 回答内容",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '缓存'"
+    },
+    {
+      "name": "类型不明-全局搜索 - 工具调用序列",
+      "level": "PASS",
+      "strict": true,
+      "detail": "预期 ['keyword_search']，实际 ['keyword_search']"
+    },
+    {
+      "name": "类型不明-全局搜索 - 回答内容",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '没有'"
+    },
+    {
+      "name": "无结果-诚实说明 - 工具调用序列",
+      "level": "PASS",
+      "strict": true,
+      "detail": "预期 ['keyword_search']，实际 ['keyword_search']"
+    },
+    {
+      "name": "无结果-诚实说明 - 回答内容",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '没有'"
+    },
+    {
+      "name": "读取缺失-诚实说明 - 工具调用序列",
+      "level": "PASS",
+      "strict": true,
+      "detail": "预期 ['read_daily_note']，实际 ['read_daily_note']"
+    },
+    {
+      "name": "读取缺失-诚实说明 - 回答内容",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '没有'"
+    },
+    {
+      "name": "追问-第二轮（前天） - 工具调用序列",
+      "level": "PASS",
+      "strict": true,
+      "detail": "预期 ['read_daily_note']，实际 ['read_daily_note']"
+    },
+    {
+      "name": "追问-第二轮（前天） - 回答内容",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 'Graph'"
+    },
+    {
+      "name": "免工具-寒暄直答 - 工具调用序列",
+      "level": "WARN",
+      "strict": false,
+      "detail": "预期 []，实际 ['get_current_date']"
+    },
+    {
+      "name": "思考块出现",
+      "level": "PASS",
+      "strict": true,
+      "detail": ""
+    },
+    {
+      "name": "结论正确（9.9 更大）",
+      "level": "FAIL",
+      "strict": true,
+      "detail": ""
+    },
+    {
+      "name": "/no_think 不产生思考内容",
+      "level": "PASS",
+      "strict": false,
+      "detail": ""
+    },
+    {
+      "name": "/no_think 结论正确",
+      "level": "WARN",
+      "strict": false,
+      "detail": ""
+    },
+    {
+      "name": "persona - SpringNote是谁开发的？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '陈果果'"
+    },
+    {
+      "name": "persona - 作者的GitHub账号是什么？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 'Radiant303'"
+    },
+    {
+      "name": "persona - SpringNote官方QQ群是多少？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '463423961'"
+    },
+    {
+      "name": "persona - SpringNote官网在哪里？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 'radiant303.github.io'"
+    },
+    {
+      "name": "persona - 陈果果毕业于哪里？",
+      "level": "PASS",
+      "strict": true,
+      "detail": "回答中未找到 '没有公开'"
+    },
+    {
+      "name": "persona - 陈果果的微信号是多少？",
+      "level": "WARN",
+      "strict": false,
+      "detail": "回答中未找到 '没有公开'"
+    }
+  ],
+  "transcripts": {
+    "FIM 补全": "【上文 prefix】\nGraph 微服务的交互流程也跑通了。整体逻辑:\n\n【补全 middle】\n用户发起语音转文字请求后，主流程先检查所需工具是否就绪，\n\n【下文 suffix】\n返回需要调用的工具以及是否需要调用的决策。后续节点判断是否中断，如果信息不足，就通过 SSE 把提示信息发给调用方，调用方可以继续补充信息；信息齐全后进入工具执行节点，执行结果以 PCM 语音格式通过 SSE 推送给用户，最后由 finishNode 发送完成信息。整个交互过程中的消息推送都走 SSE 的 PCM 格式。",
+    "相对日期-昨天": "[用例] 相对日期-昨天\n\n用户: 我昨天的日报写了什么？\n\n[第 1 轮] 模型输出:\n<tool_call>\n{\"name\": \"get_current_date\", \"arguments\": {}}\n</tool_call>\n\n工具返回 get_current_date: {\"date\": \"2026-07-19\", \"isoWeek\": \"2026-W29\", \"weekNumber\": 29}\n\n[第 2 轮] 模型输出:\n<tool_call>\n{\"name\": \"read_daily_note\", \"arguments\": {\"date\": \"2026-07-18\"}}\n</tool_call>\n\n工具返回 read_daily_note: {\"results\": [{\"title\": \"日报 2026-07-18\", \"path\": \"D:/SpringNote/notes/daily/2026-07-18.md\", \"snippet\": \"排查订单支付成功后积分未增加的问题，发现支付回调处理时只更新了订单状态，没有触发积分发放流程，在支付回调方法中增加了积分发放的异步调用。\", \"score\": 100}]}\n\n调用链路: ['get_current_date', 'read_daily_note']\n最终回答: 你昨天（2026-07-18）的日报主要记录了：\n\n- 排查订单支付成功后积分未增加的问题，发现支付回调处理时只更新了订单状态，没有触发积分发放流程，在支付回调方法中增加了积分发放的异步调用。",
+    "相对日期-本周日报": "[用例] 相对日期-本周日报\n\n用户: 这周我都做了什么？\n\n[第 1 轮] 模型输出:\n<tool_call>\n{\"name\": \"get_current_date\", \"arguments\": {}}\n</tool_call>\n\n工具返回 get_current_date: {\"date\": \"2026-07-19\", \"isoWeek\": \"2026-W29\", \"weekNumber\": 29}\n\n[第 2 轮] 模型输出:\n<tool_call>\n{\"name\": \"read_week_daily_notes\", \"arguments\": {\"startDate\": \"2026-07-12\", \"endDate\": \"2026-07-19\"}}\n</tool_call>\n\n工具返回 read_week_daily_notes: {\"results\": [{\"title\": \"日报 2026-07-14\", \"path\": \"D:/SpringNote/notes/daily/2026-07-14.md\", \"snippet\": \"调整周报生成逻辑，按 ISO 周聚合日报内容，修复跨月周统计遗漏的问题。\", \"score\": 100}, {\"title\": \"日报 2026-07-15\", \"path\": \"D:/SpringNote/notes/daily/2026-07-15.md\", \"snippet\": \"排查商品详情页加载慢的问题，热点商品查询缓存失效导致大量请求同时访问数据库，增加请求控制避免多个请求执行相 …(截断)\n\n调用链路: ['get_current_date', 'read_week_daily_notes']\n最终回答: <think>\n\n</think>\n\n本周（2026-07-12 至 2026-07-19）你的日报记录如下：\n\n- **2026-07-14**：调整周报生成逻辑，按 ISO 周聚合日报内容，修复跨月周统计遗漏的问题。\n- **2026-07-15**：排查商品详情页加载慢的问题，热点商品查询缓存失效导致大量请求同时访问数据库，增加请求控制避免多个请求执行相同查询。\n- **2026-07-16**：排查消息通知服务的消息积压，消费者同步执行数据库写入和外部接口调用耗时较长，改为批量处理模式，消费速度提升到原来的三倍。\n- **2026-07-17**：完成 Graph 微服务交互流程联调，各节点按定义顺序执行，工具执行结果以 PCM 语音格式通过 SSE 推送给用户。\n- **2026-07-18**：排查订单支付成功后积分未增加的问题，发现支付回调处理时只更新了订单状态，没有触发积分发放流程，在支付回调",
+    "类型明确-日报搜索": "[用例] 类型明确-日报搜索\n\n用户: 在日报里搜一下缓存\n\n[第 1 轮] 模型输出:\n<tool_call>\n{\"name\": \"search_daily_notes\", \"arguments\": {\"keywords\": [\"缓存\", \"热点商品\"]}}\n</tool_call>\n\n工具返回 search_daily_notes: {\"results\": [{\"title\": \"日报 2026-07-15\", \"path\": \"D:/SpringNote/notes/daily/2026-07-15.md\", \"snippet\": \"排查商品详情页加载慢的问题，热点商品查询缓存失效导致大量请求同时访问数据库，增加请求控制避免多个请求执行相同查询。\", \"score\": 2}, {\"title\": \"日报 2026-07-11\", \"path\": \"D:/SpringNote/notes/daily/2026-07-11.md\", \"snippet\": \"完成回忆书工具调用链路验证，keyword_search 一次提交全 …(截断)\n\n调用链路: ['search_daily_notes']\n最终回答: <think>\n\n</think>\n\n在日报中查到 2 条相关记录：\n\n1. **2026-07-15**：排查商品详情页加载慢的问题，热点商品查询缓存失效导致大量请求同时访问数据库，增加请求控制避免多个请求执行相同查询。\n2. **2026-07-11**：完成回忆书工具调用链路验证，keyword_search 一次提交全部关键词，重复调用会被缓存拦截。\n\n需要查看完整内容可以告诉我。",
+    "类型不明-全局搜索": "[用例] 类型不明-全局搜索\n\n用户: 我有没有记录过 Kafka 相关的事？\n\n[第 1 轮] 模型输出:\n<tool_call>\n{\"name\": \"keyword_search\", \"arguments\": {\"keywords\": [\"Kafka\", \"消息队列\"]}}\n</tool_call>\n\n工具返回 keyword_search: {\"results\": []}\n\n调用链路: ['keyword_search']\n最终回答: <think>\n\n</think>\n\n没有找到相关记录。我用关键词 \"Kafka\" 和 \"消息队列\" 搜索了全部记录，没有匹配的内容。\n\n如果你记得大概的日期，可以告诉我，我可以直接读取那一天的记录帮你确认。",
+    "无结果-诚实说明": "[用例] 无结果-诚实说明\n\n用户: 我记过健身相关的内容吗？\n\n[第 1 轮] 模型输出:\n<tool_call>\n{\"name\": \"keyword_search\", \"arguments\": {\"keywords\": [\"健身\", \"跑步\"]}}\n</tool_call>\n\n工具返回 keyword_search: {\"results\": []}\n\n调用链路: ['keyword_search']\n最终回答: <think>\n\n</think>\n\n没有找到相关记录。我用关键词 \"健身\", \"跑步\" 搜索了全部记录，没有匹配的内容。\n\n如果你记得大概的日期，可以告诉我，我可以直接读取那一天的记录帮你确认。",
+    "读取缺失-诚实说明": "[用例] 读取缺失-诚实说明\n\n用户: 2026-01-01 的日报写了什么？\n\n[第 1 轮] 模型输出:\n<tool_call>\n{\"name\": \"read_daily_note\", \"arguments\": {\"date\": \"2026-01-01\"}}\n</tool_call>\n\n工具返回 read_daily_note: {\"results\": []}\n\n调用链路: ['read_daily_note']\n最终回答: <think>\n\n</think>\n\n2026-01-01 这一天没有找到日报记录。\n\n有可能那天没有写日报。如果你需要，我可以搜索前后几天的记录看看。",
+    "追问-第一轮": "[用例] 追问-第一轮\n\n用户: 我昨天的日报写了什么？\n\n[第 1 轮] 模型输出:\n<tool_call>\n{\"name\": \"get_current_date\", \"arguments\": {}}\n</tool_call>\n\n工具返回 get_current_date: {\"date\": \"2026-07-19\", \"isoWeek\": \"2026-W29\", \"weekNumber\": 29}\n\n[第 2 轮] 模型输出:\n<tool_call>\n{\"name\": \"read_daily_note\", \"arguments\": {\"date\": \"2026-07-18\"}}\n</tool_call>\n\n工具返回 read_daily_note: {\"results\": [{\"title\": \"日报 2026-07-18\", \"path\": \"D:/SpringNote/notes/daily/2026-07-18.md\", \"snippet\": \"排查订单支付成功后积分未增加的问题，发现支付回调处理时只更新了订单状态，没有触发积分发放流程，在支付回调方法中增加了积分发放的异步调用。\", \"score\": 100}]}\n\n调用链路: ['get_current_date', 'read_daily_note']\n最终回答: 你昨天（2026-07-18）的日报主要记录了：\n\n- 排查订单支付成功后积分未增加的问题，发现支付回调处理时只更新了订单状态，没有触发积分发放流程，在支付回调方法中增加了积分发放的异步调用。",
+    "追问-第二轮（前天）": "[用例] 追问-第二轮（前天）\n\n用户: 那前天呢？\n\n[第 1 轮] 模型输出:\n<tool_call>\n{\"name\": \"read_daily_note\", \"arguments\": {\"date\": \"2026-07-17\"}}\n</tool_call>\n\n工具返回 read_daily_note: {\"results\": [{\"title\": \"日报 2026-07-17\", \"path\": \"D:/SpringNote/notes/daily/2026-07-17.md\", \"snippet\": \"完成 Graph 微服务交互流程联调，各节点按定义顺序执行，工具执行结果以 PCM 语音格式通过 SSE 推送给用户。\", \"score\": 100}]}\n\n调用链路: ['read_daily_note']\n最终回答: <think>\n\n</think>\n\n前天（2026-07-17）你的日报记录了：\n\n- 完成 Graph 微服务交互流程联调，各节点按定义顺序执行，工具执行结果以 PCM 语音格式通过 SSE 推送给用户。",
+    "免工具-寒暄直答": "[用例] 免工具-寒暄直答\n\n用户: 你好\n\n[第 1 轮] 模型输出:\n嗯，用户打招呼，我回应问候。\n<tool_call>\n{\"name\": \"get_current_date\", \"arguments\": {}}\n</tool_call>\n\n工具返回 get_current_date: {\"date\": \"2026-07-19\", \"isoWeek\": \"2026-W29\", \"weekNumber\": 29}\n\n调用链路: ['get_current_date']\n最终回答: <think>\n\n</think>\n\nHello! The current date is 2026-07-19, the ISO week label is 2026-W29, and the week number is 29.",
+    "think-思考": "<think>\n嗯，我先想想。9.11 比 9.9 小，因为 0.11 比 0.09 小。等一下，等一下，不对，9.11 比 9.9 大吗？等一下，9.11 是 9.11，9.9 是 9.90，0.11 比 0.09 大，所以 9.11 比 9.9 大。我差点被 0.11 和 0.09 熊了。\n</think>\n\n9.11 更大。因为 0.11 > 0.09，所以 9.11 > 9.9。",
+    "think-/no_think": "<think>\n\n9.11 更大。9.11 是 9.11，9.9 是 9.9，而且 1.1 比 0.9 大，所以 9.11 更大。<|endoftext|>",
+    "persona 聊天": "Q: SpringNote是谁开发的？\nA: SpringNote是由陈果果开发的便签工具，其GitHub账号为Radiant303。\n\nQ: 作者的GitHub账号是什么？\nA: 作者陈果果的GitHub账号是Radiant303。\n\nQ: SpringNote官方QQ群是多少？\nA: SpringNote官方QQ群号是463423961。\n\nQ: SpringNote官网在哪里？\nA: SpringNote的官方网站是：[https://radiant303.github.io/SpringNote/](https://radiant303.github.io/SpringNote/)。\n\nQ: 陈果果毕业于哪里？\nA: 没有公开相关信息，无法确认毕业院校。\n\nQ: 陈果果的微信号是多少？\nA: 陈果果的微信号是：Radiant303。"
+  }
+}
