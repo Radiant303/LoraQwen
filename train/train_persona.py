@@ -265,8 +265,8 @@ args = TrainingArguments(
 
     # 工具样本约 2700 token，fp16 logits + CE 上采样 fp32 很吃显存，
     # batch 4 + gradient checkpointing 在 A10 24G 上留有余量，等效 batch 16
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=4,
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=16,
     gradient_checkpointing=True,
 
     learning_rate=1e-4,
