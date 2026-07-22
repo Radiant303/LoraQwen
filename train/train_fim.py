@@ -224,6 +224,10 @@ training_args = TrainingArguments(
     num_train_epochs=3,
     per_device_train_batch_size=8,
     gradient_accumulation_steps=2,
+
+    # 验证 batch 独立设置（默认 8），FIM 样本 ~1300 token，
+    # 显式限制为 8，验证峰值 ~9G
+    per_device_eval_batch_size=8,
     learning_rate=1e-4,
     warmup_ratio=0.03,
     weight_decay=0.01,

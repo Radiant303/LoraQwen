@@ -10,7 +10,7 @@
 # - 任务配比显式化：persona 靠重复记忆、tools 靠泛化，
 #   通过 TASKS 里的 repeat 字段控制各任务采样权重
 # - 开启 gradient_checkpointing（旧版注释说开了但实际是 False），
-#   batch 提到 4×4，等效 batch 仍为 16
+#   batch 4×4 + group_by_length，等效 batch 仍为 16
 # - 精度统一 fp16：全量 fp16 加载（A10 24G），与 FIM 训练一致；
 #   8G 显存机器可改回 4bit QLoRA
 # =========================
@@ -161,7 +161,9 @@ def tokenize(example):
 
     result = tokenizer(
         text,
-        max_length=8192,
+        # 当前数据最长 2615 token（tools），4096 不会截断任何样本；
+        # 该上限只防异常超长，与显存无关（显存由实际 batch 长度决定）
+        max_length=4096,
         truncation=True,
         add_special_tokens=False,
     )
@@ -263,11 +265,18 @@ args = TrainingArguments(
     output_dir=OUTPUT,
     num_train_epochs=3,
 
-    # 工具样本约 2700 token，fp16 logits + CE 上采样 fp32 很吃显存，
-    # batch 4 + gradient checkpointing 在 A10 24G 上留有余量，等效 batch 16
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=16,
+    # 工具样本约 2700 token，fp16 logits + CE 上采样 fp32 是显存大头：
+    # batch 4 时训练峰值 ~15-17G，A10 24G 利用率合理；
+    # group_by_length 按长度分组，短样本不被长样本拖进大 padding
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=4,
     gradient_checkpointing=True,
+    group_by_length=True,
+
+    # 验证 batch 独立于训练 batch，默认是 8——
+    # tools 验证样本 ~2600 token 时 logits+CE 峰值 ~19G，epoch 末必 OOM；
+    # 显式设为 4（峰值 ~10G）
+    per_device_eval_batch_size=4,
 
     learning_rate=1e-4,
     fp16=True,
