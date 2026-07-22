@@ -137,7 +137,7 @@ uv run python train/train_persona.py
 | 精度 | fp16 全量 | 与 FIM 训练统一；8G 显存机器可改回 4bit QLoRA |
 | LoRA | r=32, alpha=64 | |
 | lr | 1e-4 | **不要低于 1e-4**，2e-5 时 LoRA 学不动 |
-| batch | 4 × 累积 4 | group_by_length 省 padding，等效 batch 16，峰值 ~15-17G |
+| batch | 4 × 累积 4 | 等效 batch 16，峰值 ~15-17G |
 | epochs | 3 | |
 | loss | assistant-only | 只在 assistant 回复上计算损失 |
 | 任务配比 | persona ×2，tools/think/FIM rehearsal ×1 | persona 靠重复记忆，tools 靠泛化 |
