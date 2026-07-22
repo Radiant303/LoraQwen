@@ -57,11 +57,11 @@ uv run python train/train_fim.py
 | 精度 | fp16 全量 | A10 24G 无压力；与 persona 训练统一 |
 | LoRA | r=64, alpha=128 | attention + MLP 全打 |
 | lr | 1e-4 | |
-| batch | 8 × 累积 2 | 等效 batch 16，训练峰值 ~15G |
+| batch | 4 × 累积 4 | 等效 batch 16，实测峰值 ~12G（batch 8 会 OOM） |
 | epochs | 3 | |
 | MAX_LENGTH | 2048 | 超长样本整条丢弃，**不截断**（截断会切掉 middle 和 EOS） |
 | loss | 仅 middle + `<|im_end|>` | 结束符参与训练，否则模型学不到"补全完就停" |
-| 验证 | 按文档分组留 3%，验证 batch 8 | 每 epoch 评估，训练结束自动载回验证 loss 最优 checkpoint |
+| 验证 | 按文档分组留 3%，验证 batch 4 | 每 epoch 评估，训练结束自动载回验证 loss 最优 checkpoint |
 
 输出目录 `models/adapters/output-qwen3-1.7-fim-v8/`。
 
@@ -137,11 +137,11 @@ uv run python train/train_persona.py
 | 精度 | fp16 全量 | 与 FIM 训练统一；8G 显存机器可改回 4bit QLoRA |
 | LoRA | r=32, alpha=64 | |
 | lr | 1e-4 | **不要低于 1e-4**，2e-5 时 LoRA 学不动 |
-| batch | 4 × 累积 4 | 等效 batch 16，峰值 ~15-17G |
+| batch | 2 × 累积 8 | 等效 batch 16，实测峰值 ~12G（batch 4 会 OOM） |
 | epochs | 3 | |
 | loss | assistant-only | 只在 assistant 回复上计算损失 |
 | 任务配比 | persona ×2，tools/think/FIM rehearsal ×1 | persona 靠重复记忆，tools 靠泛化 |
-| 验证 | 每任务留出验证集（40/50/25 条），验证 batch 4 | 每 epoch 评估 + 最优 checkpoint；训练结束按任务分别报告 eval loss |
+| 验证 | 每任务留出验证集（40/50/25 条），验证 batch 2 | 每 epoch 评估 + 最优 checkpoint；训练结束按任务分别报告 eval loss |
 
 数据构成：persona ~2157 条 + tools 3000 条 + think ~1323 条 + FIM rehearsal 500 条（防 chat 训练污染补全能力）。
 

@@ -265,16 +265,16 @@ args = TrainingArguments(
     output_dir=OUTPUT,
     num_train_epochs=3,
 
-    # 工具样本约 2700 token，fp16 logits + CE 上采样 fp32 是显存大头：
-    # batch 4 时训练峰值 ~15-17G，A10 24G 利用率合理
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=4,
+    # 工具样本约 2700 token，vocab 15 万维决定显存大头：
+    # 每 batch 的 fp16 logits ≈ batch×len×0.3G，CE 上采样 fp32 再 ×2，
+    # 反向还有副本。实测 A10 24G：batch 4 训练峰值 ~21G 会 OOM，
+    # batch 2 峰值 ~12G 安全，累积 8 保持等效 batch 16
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8,
     gradient_checkpointing=True,
 
-    # 验证 batch 独立于训练 batch，默认是 8——
-    # tools 验证样本 ~2600 token 时 logits+CE 峰值 ~19G，epoch 末必 OOM；
-    # 显式设为 4（峰值 ~10G）
-    per_device_eval_batch_size=4,
+    # 验证 batch 独立设置，同 peak 逻辑设为 2
+    per_device_eval_batch_size=2,
 
     learning_rate=1e-4,
     fp16=True,

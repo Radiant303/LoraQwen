@@ -222,12 +222,13 @@ def collate_fn(batch):
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
     num_train_epochs=3,
-    per_device_train_batch_size=8,
-    gradient_accumulation_steps=2,
+    # FIM 样本最长 ~1300 token，batch 8 的 logits/CE 峰值与
+    # persona batch 4 相当（~21G 会 OOM），batch 4 峰值 ~12G 安全
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=4,
 
-    # 验证 batch 独立设置（默认 8），FIM 样本 ~1300 token，
-    # 显式限制为 8，验证峰值 ~9G
-    per_device_eval_batch_size=8,
+    # 验证 batch 独立设置（默认 8），显式限制为 4
+    per_device_eval_batch_size=4,
     learning_rate=1e-4,
     warmup_ratio=0.03,
     weight_decay=0.01,
